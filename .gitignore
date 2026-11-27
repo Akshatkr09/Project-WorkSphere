@@ -36,3 +36,12 @@ Thumbs.db
 data/
 postgres-data/
 redis-data/
+# Generated TypeScript build metadata
+*.tsbuildinfo
+
+# Local backups
+database-backup-*/
+WorkSphere-Current.zip
+
+database-backup-*/
+*.tsbuildinfo

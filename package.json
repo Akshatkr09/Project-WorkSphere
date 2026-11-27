@@ -12,5 +12,11 @@
     "build:frontend": "npm run build --workspace frontend",
     "typecheck": "npm run typecheck --workspace frontend && npm run typecheck --workspace backend",
     "test:backend": "npm run test --workspace backend"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.1": true,
+    "@prisma/engines@6.19.1": true,
+    "prisma@6.19.1": true,
+    "esbuild@0.25.12": true
   }
 }
