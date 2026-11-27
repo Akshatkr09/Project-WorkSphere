@@ -1,0 +1,32 @@
+import type { NextFunction, Request, Response } from "express";
+import { verifyAccessToken } from "../security/crypto.js";
+
+export type AuthContext = { userId: string; organizationId: string; role: string };
+declare global {
+  namespace Express {
+    interface Request { auth?: AuthContext; requestId?: string; }
+  }
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const header = req.header("authorization");
+  if (!header?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "A valid bearer token is required", requestId: req.requestId } });
+  }
+  try {
+    const claims = verifyAccessToken(header.slice(7));
+    req.auth = { userId: claims.sub, organizationId: claims.org, role: claims.role };
+    return next();
+  } catch {
+    return res.status(401).json({ error: { code: "INVALID_TOKEN", message: "Access token is invalid or expired", requestId: req.requestId } });
+  }
+}
+
+export function allowRoles(...roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.auth || !roles.includes(req.auth.role)) {
+      return res.status(403).json({ error: { code: "FORBIDDEN", message: "You do not have permission to perform this action", requestId: req.requestId } });
+    }
+    return next();
+  };
+}
