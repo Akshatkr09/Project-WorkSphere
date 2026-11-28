@@ -47,3 +47,6 @@ jobs:
       - name: Analytics service tests
         working-directory: analytics-service
         run: python -m pytest -q
+        
+      - name: Generate Prisma client
+        run: npx prisma generate --schema backend/prisma/schema.prisma
