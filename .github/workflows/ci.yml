@@ -32,6 +32,9 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        run: npx prisma generate --schema backend/prisma/schema.prisma
+
       - name: Install Python dependencies
         run: python -m pip install -r analytics-service/requirements.txt
 
@@ -47,6 +50,3 @@ jobs:
       - name: Analytics service tests
         working-directory: analytics-service
         run: python -m pytest -q
-        
-      - name: Generate Prisma client
-        run: npx prisma generate --schema backend/prisma/schema.prisma
