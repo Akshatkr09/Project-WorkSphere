@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, allowRoles } from "../middleware/auth.js";
+import { projectAccessWhere } from "../security/project-access.js";
 
 export const projectsRouter = Router();
 projectsRouter.use(requireAuth);
@@ -19,11 +20,10 @@ projectsRouter.get("/", async (req, res, next) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
-    const where = { organizationId: req.auth!.organizationId };
+    const where = projectAccessWhere(req.auth!, "read");
     const [items, total] = await prisma.$transaction([
       prisma.project.findMany({
-        where, skip: (page - 1) * pageSize, take: pageSize,
-        orderBy: { updatedAt: "desc" },
+        where, skip: (page - 1) * pageSize, take: pageSize, orderBy: { updatedAt: "desc" },
         include: { _count: { select: { tasks: true, members: true, milestones: true } } }
       }),
       prisma.project.count({ where })
@@ -45,19 +45,15 @@ projectsRouter.post("/", allowRoles("OWNER", "ADMIN", "PROJECT_MANAGER"), async 
     const project = await prisma.$transaction(async tx => {
       const created = await tx.project.create({
         data: {
-          organizationId: req.auth!.organizationId,
-          name: input.name, description: input.description,
+          organizationId: req.auth!.organizationId, name: input.name, description: input.description,
           status: input.status, startDate: input.startDate, dueDate: input.dueDate,
           teamId: input.teamId, createdById: req.auth!.userId
         }
       });
       await tx.projectMember.create({ data: { projectId: created.id, userId: req.auth!.userId, role: "MANAGER" } });
       await tx.activityLog.create({
-        data: {
-          organizationId: req.auth!.organizationId, projectId: created.id,
-          actorId: req.auth!.userId, action: "project.created",
-          entityType: "project", entityId: created.id, requestId: req.requestId
-        }
+        data: { organizationId: req.auth!.organizationId, projectId: created.id, actorId: req.auth!.userId,
+          action: "project.created", entityType: "project", entityId: created.id, requestId: req.requestId }
       });
       return created;
     });
@@ -68,8 +64,9 @@ projectsRouter.post("/", allowRoles("OWNER", "ADMIN", "PROJECT_MANAGER"), async 
 projectsRouter.get("/:projectId", async (req, res, next) => {
   try {
     const project = await prisma.project.findFirst({
-      where: { id: req.params.projectId, organizationId: req.auth!.organizationId },
-      include: { milestones: true, members: { include: { user: { select: { id: true, name: true, email: true } } } }, _count: { select: { tasks: true } } }
+      where: { id: req.params.projectId, ...projectAccessWhere(req.auth!, "read") },
+      include: { milestones: true, members: { include: { user: { select: { id: true, name: true, email: true } } } },
+        _count: { select: { tasks: true } } }
     });
     if (!project) return res.status(404).json({ error: { code: "PROJECT_NOT_FOUND", message: "Project not found" } });
     res.json({ data: project });
