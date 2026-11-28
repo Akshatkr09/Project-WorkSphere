@@ -8,9 +8,11 @@ import { projectMembersRouter } from "./project-members.routes.js";
 import { organizationRouter, invitationAcceptRouter } from "./organization.routes.js";
 import { commentsRouter } from "./comments.routes.js";
 import { subtasksRouter } from "./subtasks.routes.js";
+import { analyticsRouter } from "./analytics.routes.js";
 
 export const apiRouter = Router();
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/analytics", analyticsRouter);
 apiRouter.use("/invitations", invitationAcceptRouter);
 apiRouter.use("/organization", organizationRouter);
 apiRouter.use("/projects", projectMembersRouter);

@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  title: WorkSphere Core API (starter contract)
+  version: 1.0.0
+  description: >
+    Starter OpenAPI contract for the verified API surface. Expand request and response
+    schemas against backend Zod validators before treating this as exhaustive.
+servers:
+  - url: http://localhost:3001/api/v1
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Projects
+  - name: Tasks
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Core API liveness
+      responses:
+        "200":
+          description: API is responding
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user and create an organization workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, organizationName, organizationSlug]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 10 }
+                organizationName: { type: string }
+                organizationSlug: { type: string }
+      responses:
+        "201": { description: Account and workspace created }
+        "400": { description: Invalid input }
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Sign in to a workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, organizationSlug]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                organizationSlug: { type: string }
+      responses:
+        "200": { description: Session issued }
+        "401": { description: Invalid credentials }
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200": { description: Session rotated }
+        "401": { description: Refresh token invalid or expired }
+  /projects:
+    get:
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      summary: List accessible projects
+      responses:
+        "200": { description: Paginated accessible projects }
+        "401": { description: Authentication required }
+    post:
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      summary: Create a project
+      responses:
+        "201": { description: Project created }
+        "403": { description: Insufficient permission }
+  /projects/{projectId}:
+    get:
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      summary: Get project details
+      parameters:
+        - in: path
+          name: projectId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Project details }
+        "404": { description: Project not found or inaccessible }
+  /tasks:
+    get:
+      tags: [Tasks]
+      security: [{ bearerAuth: [] }]
+      summary: List accessible tasks
+      responses:
+        "200": { description: Paginated accessible tasks }
+    post:
+      tags: [Tasks]
+      security: [{ bearerAuth: [] }]
+      summary: Create a task in an accessible project
+      responses:
+        "201": { description: Task created }
+        "403": { description: Insufficient permission }
+  /tasks/{taskId}:
+    patch:
+      tags: [Tasks]
+      security: [{ bearerAuth: [] }]
+      summary: Update a task using optimistic version checking
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Task updated }
+        "409": { description: Version conflict }
+        "404": { description: Task not found or inaccessible }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,40 +1,31 @@
-# WorkSphere – Architecture Overview
+# WorkSphere Architecture
 
-## System shape
+## Service boundaries
 
-WorkSphere is a single repository with independently bounded application services.
-
-```text
-Browser
-   |
-   v
-Next.js frontend (port 3000)
-   |
-   v
-Express core API (port 3001) ---------> PostgreSQL
-   |                                      (system of record)
-   |
-   +---- service calls ----------------> FastAPI analytics (port 8000)
-   |
-   +---- future async jobs ------------> Redis / workers
+```mermaid
+flowchart LR
+  U[Browser] --> F[Next.js Frontend]
+  F -->|REST /api/v1| N[Express API]
+  N -->|Prisma| P[(PostgreSQL)]
+  N -->|Private service token / HTTP| A[FastAPI Analytics]
+  A -->|Read analytics data| P
+  N -. planned async jobs .-> R[(Redis)]
+  R -. planned workers .-> W[Background Worker]
 ```
 
-## Service ownership
+## Responsibilities
 
-| Component | Responsibility | Authoritative data |
-|---|---|---|
-| Next.js | User interface, navigation, forms | None |
-| Express | Core business rules and REST API | Organizations, memberships, projects, tasks and collaboration records |
-| FastAPI | Bounded processing and analytics | Derived results only; not a duplicate business-data store |
-| PostgreSQL | Durable relational persistence | System of record |
-| Redis | Cache and asynchronous job coordination | Ephemeral/cache/job state |
+- **Next.js:** user interface, navigation, forms and client-side session handling.
+- **Express:** authentication, authorization, tenant-scoped business operations and primary REST API.
+- **PostgreSQL:** authoritative persistent application data.
+- **Prisma:** typed database access and migrations.
+- **FastAPI:** analytics and export processing.
+- **Redis:** provisioned for caching and asynchronous work; a production job/worker workflow must be separately implemented and verified.
 
-## Multi-tenancy boundary
+## Tenant isolation
 
-Every organization-owned record must be associated with a tenant/organization identifier. The backend must derive the caller's authorized tenant context and enforce it for every resource access. Frontend filtering is not a security boundary.
+Every authenticated business request must derive organization context from the verified session and apply it in server-side database access checks. Never trust a client-supplied organization ID as authorization.
 
-Tenant-aware schema constraints, authorization middleware, and cross-tenant tests will be implemented in later milestones.
+## Current limitations
 
-## Current milestone boundaries
-
-Milestone 1 creates service shells and local infrastructure only. It does not claim to implement authentication, tenant isolation, business entities, or production readiness.
+This diagram describes the current intended architecture and identifies Redis worker processing as planned unless a verified worker implementation exists in the repository. It is not a claim of production deployment.

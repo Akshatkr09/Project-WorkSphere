@@ -1,2 +1,12 @@
-const items=[["Profile","Your name, profile photo and personal details."],["Workspace","Workspace name and organization details."],["Notifications","Choose which updates you'd like to receive."],["Security","Account security and sign-in preferences."]];
-export default function Settings(){return <div className="stack"><div className="page-title"><div><small className="eyebrow">MAKE IT YOURS</small><h1>Settings</h1><p>Manage your personal and workspace preferences.</p></div></div>{items.map(([a,b])=><article className="panel setting" key={a}><div><b>{a}</b><p>{b}</p></div><span>→</span></article>)}<small className="muted">Settings are interface placeholders in this assessment.</small></div>}
+"use client";
+import { useEffect,useState } from "react";
+import { readSession } from "@/lib/api";
+export default function Settings(){
+ const [user,setUser]=useState<{name:string;email:string}|null>(null);const [org,setOrg]=useState<{name:string;slug:string}|null>(null);
+ useEffect(()=>{const s=readSession();if(s){setUser(s.user);setOrg(s.organization)}},[]);
+ return <div className="stack"><div className="page-title"><div><small className="eyebrow">WORKSPACE PROFILE</small><h1>Settings</h1><p>Account and workspace information for the current session.</p></div></div>
+ <article className="panel setting"><div><b>Personal account</b><p>{user?.name} · {user?.email}</p></div></article>
+ <article className="panel setting"><div><b>Workspace</b><p>{org?.name} · {org?.slug}</p></div></article>
+ <article className="panel setting"><div><b>Session security</b><p>Access tokens are held in session storage for this local assessment frontend. Production deployment should move refresh credentials to secure, HttpOnly cookies.</p></div></article>
+ </div>;
+}

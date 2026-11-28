@@ -1,0 +1,49 @@
+name: WorkSphere CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typecheck, tests and builds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: python -m pip install -r analytics-service/requirements.txt
+
+      - name: Frontend and backend typecheck
+        run: npm run typecheck
+
+      - name: Backend tests
+        run: npm run test:backend
+
+      - name: Frontend production build
+        run: npm run build:frontend
+
+      - name: Analytics service tests
+        working-directory: analytics-service
+        run: python -m pytest -q

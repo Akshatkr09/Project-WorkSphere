@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import "../worksphere-completion.css";
+import "../worksphere-project-tasks.css";
 
 export const metadata: Metadata = {
   title: "WorkSphere",

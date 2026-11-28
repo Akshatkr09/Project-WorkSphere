@@ -1,25 +1,35 @@
-$ErrorActionPreference = 'Stop'
-$root = (Get-Location).Path
-if (-not (Test-Path '.git')) { throw 'Run this from the WorkSphere repository root.' }
-
-$append = @'
-# Generated TypeScript build metadata
-*.tsbuildinfo
-
-# Local backups
-database-backup-*/
-WorkSphere-Current.zip
-'@
-$gitignore = Join-Path $root '.gitignore'
-$current = Get-Content $gitignore -Raw
-if ($current -notmatch '(?m)^\*\.tsbuildinfo$') {
-    Add-Content -Path $gitignore -Value $append
+$ErrorActionPreference = "Stop"
+$Root = (Get-Location).Path
+if (-not (Test-Path (Join-Path $Root "frontend/package.json"))) {
+  throw "Run this script from the WorkSphere repository root (frontend/package.json was not found)."
 }
-
-$zip = Join-Path $env:USERPROFILE 'Downloads\WorkSphere-Next-Update.zip'
-if (-not (Test-Path $zip)) { $zip = Join-Path $env:USERPROFILE 'Desktop\WorkSphere-Next-Update.zip' }
-if (-not (Test-Path $zip)) { throw "Copy WorkSphere-Next-Update.zip to Downloads or Desktop first." }
-Expand-Archive -Path $zip -DestinationPath $root -Force
-Write-Host 'WorkSphere documentation and engineering workflow update applied.'
-Write-Host 'Your .env and existing application source files were not included in this ZIP.'
-git status --short
+$Backup = Join-Path $Root ("_worksphere_backup_" + (Get-Date -Format "yyyyMMdd_HHmmss"))
+New-Item -ItemType Directory -Path $Backup | Out-Null
+$Files = @(
+"frontend/app/layout.tsx",
+"frontend/app/page.tsx",
+"frontend/app/(workspace)/layout.tsx",
+"frontend/app/(workspace)/dashboard/page.tsx",
+"frontend/app/(workspace)/projects/page.tsx",
+"frontend/app/(workspace)/tasks/page.tsx",
+"frontend/app/(workspace)/team/page.tsx",
+"frontend/app/(workspace)/settings/page.tsx",
+"frontend/components/workspace-shell.tsx"
+)
+foreach ($File in $Files) {
+  $Target = Join-Path $Root $File
+  if (Test-Path $Target) {
+    $Dest = Join-Path $Backup $File
+    New-Item -ItemType Directory -Force -Path (Split-Path $Dest) | Out-Null
+    Copy-Item $Target $Dest -Force
+  }
+}
+Get-ChildItem -Path (Join-Path $PSScriptRoot "frontend") -Recurse -File | ForEach-Object {
+  $Relative = $_.FullName.Substring((Join-Path $PSScriptRoot "frontend").Length + 1)
+  $Destination = Join-Path $Root ("frontend\" + $Relative)
+  New-Item -ItemType Directory -Force -Path (Split-Path $Destination) | Out-Null
+  Copy-Item $_.FullName $Destination -Force
+}
+Write-Host "WorkSphere application completion package applied." -ForegroundColor Green
+Write-Host "Backup: $Backup"
+Write-Host "The existing .env, database, backend and installed dependencies were not modified."
