@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import { verifyAccessToken } from "../security/crypto.js";
 import { prisma } from "../lib/prisma.js";
+import { InvalidAccessTokenError, verifyAccessToken } from "../security/crypto.js";
 
 export type AuthContext = { userId: string; organizationId: string; role: string };
 declare global {
@@ -15,8 +15,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!header?.startsWith("Bearer ")) {
     return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "A valid bearer token is required", requestId: req.requestId } });
   }
+
+  let claims: ReturnType<typeof verifyAccessToken>;
   try {
-    const claims = verifyAccessToken(header.slice(7));
+    claims = verifyAccessToken(header.slice(7));
+  } catch (error) {
+    if (error instanceof InvalidAccessTokenError) {
+      return res.status(401).json({ error: { code: "INVALID_TOKEN", message: "Access token is invalid or expired", requestId: req.requestId } });
+    }
+    return next(error);
+  }
+
+  try {
     const membership = await prisma.membership.findUnique({
       where: { organizationId_userId: { organizationId: claims.org, userId: claims.sub } },
       select: { role: true, status: true }
