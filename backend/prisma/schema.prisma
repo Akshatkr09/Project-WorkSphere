@@ -86,24 +86,43 @@ model User {
   comments           Comment[]
   activityEntries    ActivityLog[]   @relation("ActivityActor")
   uploadedFiles      Attachment[]    @relation("AttachmentUploader")
+  refreshSessions    RefreshSession[]
 
   @@index([name])
 }
 
 model Organization {
-  id          String        @id @default(uuid()) @db.Uuid
-  name        String        @db.VarChar(120)
-  slug        String        @unique @db.VarChar(80)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  memberships Membership[]
-  invitations Invitation[]
-  teams       Team[]
-  projects    Project[]
-  tasks       Task[]
-  comments    Comment[]
-  activities  ActivityLog[]
-  attachments Attachment[]
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @db.VarChar(120)
+  slug            String           @unique @db.VarChar(80)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  memberships     Membership[]
+  invitations     Invitation[]
+  teams           Team[]
+  projects        Project[]
+  tasks           Task[]
+  comments        Comment[]
+  activities      ActivityLog[]
+  attachments     Attachment[]
+  refreshSessions RefreshSession[]
+}
+
+model RefreshSession {
+  id             String       @id @default(uuid()) @db.Uuid
+  userId         String       @db.Uuid
+  organizationId String       @db.Uuid
+  tokenHash      String       @unique @db.VarChar(64)
+  familyId       String       @db.Uuid
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, organizationId, revokedAt])
+  @@index([familyId, revokedAt])
+  @@index([expiresAt])
 }
 
 model Membership {
